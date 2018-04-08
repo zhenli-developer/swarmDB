@@ -14,16 +14,13 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-7
-            - wget
-            - python-dev
-            - unzip
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
     - os: osx
       osx_image: xcode8
       env:
-        - MATRIX_EVAL="brew update && brew install gcc wget && CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="brew update && brew install gcc && CC=gcc-7 && CXX=g++-7"
 
 before_install:
     - eval "${MATRIX_EVAL}"
@@ -32,10 +29,10 @@ before_install:
     - cd boost_1_66_0
     - sudo ./bootstrap.sh --prefix=/usr/local/ --with-libraries=$BOOST_LIBS
     - ./b2 -d0
-    - ./b2 install -d0
+    - sudo ./b2 install -d0
     - wget https://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh
     - chmod +x ./cmake-3.11.0-Linux-x86_64.sh
-    - ./cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
+    - sudo ./cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 compiler:
   - gcc
