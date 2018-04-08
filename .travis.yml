@@ -23,12 +23,12 @@ matrix:
     - os: osx
       osx_image: xcode8
       env:
-        - MATRIX_EVAL="brew install gcc core-utils && CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="brew install gcc wget && CC=gcc-7 && CXX=g++-7"
 
 before_install:
     - eval "${MATRIX_EVAL}"
     - wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
-    - tar jxf wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
+    - tar jxf boost_1_66_0.tar.bz2
     - cd boost_1_66_0
     - sudo ./boostrap.sh --prefix=/usr/local/ --with-libraries=$BOOST_LIBS
     - ./b2 -d0
