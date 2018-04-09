@@ -53,4 +53,7 @@ before_script:
   - cd build
   - cmake ..
 
-script: make
+script:
+  - ${CXX} --version
+  - echo CXXFLAGS=${CXXFLAGS}
+  - make
