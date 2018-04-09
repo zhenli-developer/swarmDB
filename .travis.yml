@@ -24,13 +24,13 @@ matrix:
 
 before_install:
     - eval "${MATRIX_EVAL}"
-    - wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
+    - wget -c --no-check-certificate http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
     - tar jxf boost_1_66_0.tar.bz2
     - cd boost_1_66_0
     - sudo ./bootstrap.sh --prefix=/usr/local/ --with-libraries=$BOOST_LIBS
     - ./b2 -d0
     - sudo ./b2 install -d0
-    - wget https://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh
+    - wget --no-check-certificate https://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh
     - chmod +x ./cmake-3.11.0-Linux-x86_64.sh
     - sudo ./cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
@@ -38,6 +38,7 @@ compiler:
   - gcc
 
 before_script:
+  - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
   - cmake ..
