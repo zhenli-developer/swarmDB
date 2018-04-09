@@ -16,11 +16,13 @@ matrix:
             - g++-7
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+        - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
 
     - os: osx
       osx_image: xcode8
       env:
         - MATRIX_EVAL="brew update && brew install gcc && CC=gcc-7 && CXX=g++-7"
+        - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-DARWIN-x86_64.tar.gz"
 
 before_install:
     - eval "${MATRIX_EVAL}"
@@ -30,6 +32,15 @@ before_install:
     - sudo ./bootstrap.sh --prefix=/usr/local/ --with-libraries=$BOOST_LIBS
     - ./b2 -d0
     - sudo ./b2 install -d0
+    - mkdir -p $HOME/.local
+        if [ ! -e $HOME/.local/bin/cmake ]; then
+              echo "CMake not found in the cache, get and extract it..."
+              travis_retry curl -L ${CMAKE_URL} \
+                  | tar -xz -C $HOME/.local --strip-components=1
+          else
+              echo "Using cached CMake"
+          fi
+        fi
     - wget --no-check-certificate https://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh
     - chmod +x ./cmake-3.11.0-Linux-x86_64.sh
     - sudo ./cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
