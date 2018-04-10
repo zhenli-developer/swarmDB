@@ -34,7 +34,7 @@ before_install:
         echo "Boost not found in the cache, get and extract it..."
         mkdir -p $HOME/.local/$BOOST_PACKAGE
         travis_retry curl -L ${BOOST_URL} \
-          | tar -xvj -C $HOME/.local/$BOOST_PACKAGE --strip-components=1
+          | tar -xj -C $HOME/.local/$BOOST_PACKAGE --strip-components=1
         cd $HOME/.local/$BOOST_PACKAGE
         ./bootstrap.sh --prefix=$HOME/.local/$BOOST_PACKAGE --with-libraries=$BOOST_LIBS
         ./b2 install -d0
@@ -46,7 +46,7 @@ before_install:
         if [ ! -e $HOME/.local/bin/cmake ]; then
           echo "CMake not found in the cache, get and extract it..."
           travis_retry curl -L ${CMAKE_URL} \
-            | tar -xvz -C $HOME/.local --strip-components=1
+            | tar -xz -C $HOME/.local --strip-components=1
         else
           echo "Using cached CMake"
         fi
@@ -59,7 +59,7 @@ before_script:
   - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
-  - $HOME/.local/cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
+  - $HOME/.local/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
 
 script:
   - ${CXX} --version
