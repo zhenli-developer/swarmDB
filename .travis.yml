@@ -28,9 +28,10 @@ matrix:
 
 before_install:
     - eval "${MATRIX_EVAL}"
+    - mkdir -p $HOME/.local
     - |
       if [ ! -e $HOME/.local/$BOOST_PACKAGE/lib ]; then
-        echo "CMake not found in the cache, get and extract it..."
+        echo "Boost not found in the cache, get and extract it..."
         travis_retry curl -L ${BOOST_URL} \
           | tar -xz -C $HOME/.local --strip-components=1
         cd $HOME/.local/$BOOST_PACKAGE
@@ -40,7 +41,6 @@ before_install:
       else
         echo "Using cached Boost"
       fi
-    - mkdir -p $HOME/.local
     - |
       if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
         if [ ! -e $HOME/.local/bin/cmake ]; then
