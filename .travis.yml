@@ -1,4 +1,4 @@
-sudo: required
+sudo: false
 language: cpp
 
 env:
@@ -30,14 +30,14 @@ before_install:
     - eval "${MATRIX_EVAL}"
     - mkdir -p $HOME/.local
     - |
-      if [ ! -e $HOME/.local/$BOOST_PACKAGE/lib ]; then
+      if [ ! -e $HOME/.local/$BOOST_PACKAGE/libs ]; then
         echo "Boost not found in the cache, get and extract it..."
         mkdir -p $HOME/.local/$BOOST_PACKAGE
         travis_retry curl -L ${BOOST_URL} \
-          | tar -xz -C $HOME/.local/$BOOST_PACKAGE --strip-components=1
+          | tar -xvj -C $HOME/.local/$BOOST_PACKAGE --strip-components=1
         cd $HOME/.local/$BOOST_PACKAGE
-        sudo ./bootstrap.sh --prefix=$HOME/.local/$BOOST_PACKAGE --with-libraries=$BOOST_LIBS
-        sudo ./b2 install -d0
+        ./bootstrap.sh --prefix=$HOME/.local/$BOOST_PACKAGE --with-libraries=$BOOST_LIBS
+        ./b2 install -d0
       else
         echo "Using cached Boost"
       fi
@@ -46,7 +46,7 @@ before_install:
         if [ ! -e $HOME/.local/bin/cmake ]; then
           echo "CMake not found in the cache, get and extract it..."
           travis_retry curl -L ${CMAKE_URL} \
-            | tar -xz -C $HOME/.local --strip-components=1
+            | tar -xvz -C $HOME/.local --strip-components=1
         else
           echo "Using cached CMake"
         fi
@@ -59,7 +59,7 @@ before_script:
   - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
-  - cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
+  - $HOME/.local/cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
 
 script:
   - ${CXX} --version
