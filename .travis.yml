@@ -19,12 +19,14 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake"
 
     - os: osx
       osx_image: xcode8
       env:
         - MATRIX_EVAL="brew update && brew upgrade cmake"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
+        - CMAKE_COMMAND="cmake"
 
 before_install:
     - eval "${MATRIX_EVAL}"
@@ -59,7 +61,7 @@ before_script:
   - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
-  - $HOME/.local/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
+  - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
 
 script:
   - ${CXX} --version
