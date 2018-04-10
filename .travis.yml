@@ -28,6 +28,10 @@ matrix:
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake"
 
+cache:
+  directories:
+    - $HOME/.local
+
 before_install:
     - eval "${MATRIX_EVAL}"
     - mkdir -p $HOME/.local
