@@ -4,6 +4,8 @@ language: cpp
 env:
   global:
     - BOOST_LIBS="test,chrono,coroutine,program_options,random,regex,system,thread"
+    - BOOST_PACKAGE="boost_1_66_0"
+    - BOOST_URL="http://sourceforge.net/projects/boost/files/boost/1.66.0/$BOOST_PACKAGE.tar.bz2"
 
 matrix:
   include:
@@ -26,12 +28,18 @@ matrix:
 
 before_install:
     - eval "${MATRIX_EVAL}"
-    - wget -c --no-check-certificate http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
-    - tar jxf boost_1_66_0.tar.bz2
-    - cd boost_1_66_0
-    - sudo ./bootstrap.sh --prefix=/usr/local/ --with-libraries=$BOOST_LIBS
-    - ./b2 -d0
-    - sudo ./b2 install -d0
+    - |
+      if [ ! -e $HOME/.local/$BOOST_PACKAGE/lib ]; then
+        echo "CMake not found in the cache, get and extract it..."
+        travis_retry curl -L ${BOOST_URL} \
+          | tar -xz -C $HOME/.local --strip-components=1
+        cd $HOME/.local/$BOOST_PACKAGE
+        sudo ./bootstrap.sh --prefix=$HOME/.local/$BOOST_PACKAGE --with-libraries=$BOOST_LIBS
+        ./b2 -d0
+        sudo ./b2 install -d0
+      else
+        echo "Using cached Boost"
+      fi
     - mkdir -p $HOME/.local
     - |
       if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
@@ -51,7 +59,7 @@ before_script:
   - cd $TRAVIS_BUILD_DIR
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
 
 script:
   - ${CXX} --version
