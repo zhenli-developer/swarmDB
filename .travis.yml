@@ -32,11 +32,11 @@ before_install:
     - |
       if [ ! -e $HOME/.local/$BOOST_PACKAGE/lib ]; then
         echo "Boost not found in the cache, get and extract it..."
+        mkdir -p $HOME/.local/$BOOST_PACKAGE
         travis_retry curl -L ${BOOST_URL} \
-          | tar -xz -C $HOME/.local --strip-components=1
+          | tar -xz -C $HOME/.local/$BOOST_PACKAGE --strip-components=1
         cd $HOME/.local/$BOOST_PACKAGE
         sudo ./bootstrap.sh --prefix=$HOME/.local/$BOOST_PACKAGE --with-libraries=$BOOST_LIBS
-        ./b2 -d0
         sudo ./b2 install -d0
       else
         echo "Using cached Boost"
