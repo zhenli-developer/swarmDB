@@ -60,8 +60,4 @@ script:
   - echo CXXFLAGS=${CXXFLAGS}
   - make
   - make install
-  - make package
 
-after_success:
-  - curl -u<USERNAME>:<PASSWORD> -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/<DEBIAN_PACKAGE_NAME>;\
-  deb.distribution=<DISTRIBUTION>;deb.component=<COMPONENT>;deb.architecture=<ARCHITECTURE>" -T <PATH_TO_FILE>$TRAVIS_BUILD_NUMBER
