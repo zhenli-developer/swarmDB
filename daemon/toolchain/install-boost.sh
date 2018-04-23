@@ -1,4 +1,4 @@
-#!/usr/bin/env bash -e
+#!/bin/bash -e
 # A script for installing boost
 
 if [ "$1" == "-h" ]; then
