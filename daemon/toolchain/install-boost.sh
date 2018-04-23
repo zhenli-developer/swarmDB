@@ -1,4 +1,10 @@
 #!/usr/bin/env bash -e
+# A script for installing boost
+
+if [ "$1" == "-h" ]; then
+  echo "Usage: `basename $0` requires that BOOST_VERSION (e.g. 1.67.0) and BOOST_INSTALL_DIR are set in the local env"
+  exit 0
+fi
 
 if [ -z "${BOOST_VERSION}" ]; then
     echo "Need to set BOOST_VERSION"
