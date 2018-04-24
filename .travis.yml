@@ -14,7 +14,7 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-7 pkg-config libjsoncpp
+            - g++-7 pkg-config libjsoncpp-dev
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
