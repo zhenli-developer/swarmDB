@@ -3,7 +3,7 @@ language: cpp
 
 env:
   global:
-    - BOOST_INSTALL_DIR="$HOME/.local/"
+    - BOOST_INSTALL_DIR="$HOME/.local"
     - BOOST_VERSION="1.67.0"
 
 matrix:
@@ -50,10 +50,10 @@ compiler:
 
 before_script:
   - cd $TRAVIS_BUILD_DIR
-  - travis_wait daemon/toolchain/install-boost.sh
+  - travis_wait source daemon/toolchain/install-boost.sh
   - mkdir build
   - cd build
-  - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
+  - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_ROOT ..
 
 script:
   - ${CXX} --version
