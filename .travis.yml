@@ -53,7 +53,7 @@ before_script:
   - travis_wait source daemon/toolchain/install-boost.sh
   - mkdir build
   - cd build
-  - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_ROOT ..
+  - source daemon/toolchain/install-boost.sh && ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_ROOT ..
 
 script:
   - ${CXX} --version
