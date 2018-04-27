@@ -22,4 +22,4 @@ WORKDIR /tmp/swarm_home
 ENTRYPOINT mkdir -p ${SWARM_NAME} \
     && cd ${SWARM_NAME} \
     && envsubst < /tmp/config.json.template > config-${SWARM_NAME}.json \
-    && swarm -c config-${SWARM_NAME}.json \
+    && swarm -c config-${SWARM_NAME}.json
