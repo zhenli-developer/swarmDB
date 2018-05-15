@@ -20,6 +20,21 @@ env:
 matrix:
   include:
     - os: linux
+      dist: xenial
+      addons:
+        apt:
+          packages:
+            - g++-7
+            - pkg-config
+            - libjsoncpp-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+        - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake"
+        - PACKAGE_DIST=xenial
+
+    - os: linux
+      dist: trusty
       addons:
         apt:
           sources:
@@ -32,6 +47,7 @@ matrix:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
         - CMAKE_COMMAND="$HOME/.local/bin/cmake"
+        - PACKAGE_DIST=trusty
 
     - os: osx
       osx_image: xcode9.3
@@ -83,12 +99,12 @@ after_success:
   - |
     if [ "$TRAVIS_BRANCH" = "master" ]; then
       if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
-        travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=all;deb.component=stable;deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
+        travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=${PACKAGE_DIST};deb.component=stable;deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
       fi
       if [ "$TRAVIS_OS_NAME" = "osx" ]; then
         travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_OSX} "https://bluzelle.jfrog.io/bluzelle/OSX/${PACKAGE_NAME_OSX}"
       fi
-      git tag release-${TRAVIS_OS_NAME}-${PROJECT_VERSION}
+      git tag release-${TRAVIS_OS_NAME}${PACKAGE_DIST}-${PROJECT_VERSION}
       git remote add origin-swarm https://${GITHUB_TOKEN}@github.com/bluzelle/swarmdb.git > /dev/null 2>&1
       git push --quiet --set-upstream origin-swarm ${TRAVIS_BRANCH} --tags
     fi
