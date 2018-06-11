@@ -5,8 +5,8 @@ message state_msg
     string peerList = 1;
 
     enum RaftState {
-        ELECTION = 1;
-        NONELECTION = 2;
+        ELECTION = 0;
+        NONELECTION = 1;
     }
 
     RaftState raftState = 2;

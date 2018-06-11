@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 import "database.proto";
-import "state.proto"
+import "state.proto";
 
 message bzn_msg
 {
