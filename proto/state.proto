@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+message state_msg
+{
+    string peerList = 1;
+
+    enum RaftState {
+        ELECTION = 1;
+        NONELECTION = 2;
+    }
+
+    RaftState raftState = 2;
+    string leaderUuid = 3;
+
+    uint32 numDbs = 4;
+    uint32 totalDbSize = 5;
+    uint32 totalKVP = 6;
+}

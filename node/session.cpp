@@ -130,6 +130,8 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 {
     this->idle_timer->cancel(); // kill timer for duration of write...
 
+    this->websocket->get_websocket().binary(true);
+
     this->websocket->async_write(
         boost::asio::buffer(*msg),
         this->strand->wrap(

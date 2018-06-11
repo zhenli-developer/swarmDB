@@ -1,11 +1,13 @@
 syntax = "proto3";
 
 import "database.proto";
+import "state.proto"
 
 message bzn_msg
 {
     oneof msg {
         database_msg db = 10;
-        string json = 11;
+        state_msg state = 11;
+        string json = 12;
     }
 }
