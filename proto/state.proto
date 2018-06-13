@@ -1,9 +1,15 @@
 syntax = "proto3";
 
+message peer {
+    string host = 1;
+    uint32 port = 2;
+    uint32 http_port = 3;
+    string name = 4;
+    string uuid = 5;
+}
+
 message state_msg
 {
-    string peerList = 1;
-
     enum RaftState {
         ELECTION = 0;
         NONELECTION = 1;
@@ -15,4 +21,6 @@ message state_msg
     uint32 numDbs = 4;
     uint32 totalDbSize = 5;
     uint32 totalKVP = 6;
+
+    repeated peer peers = 7;
 }
