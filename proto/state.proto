@@ -19,8 +19,10 @@ message state_msg
     string leaderUuid = 3;
 
     uint32 numDbs = 4;
-    uint32 totalDbSize = 5;
+    uint64 totalDbSize = 5;
     uint32 totalKVP = 6;
 
-    repeated peer peers = 7;
+    uint32 crudCommits = 7;
+
+    repeated peer peers = 8;
 }
