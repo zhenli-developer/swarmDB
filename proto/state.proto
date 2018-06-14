@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+message state_request {}
+
 message peer {
     string host = 1;
     uint32 port = 2;
@@ -8,7 +10,7 @@ message peer {
     string uuid = 5;
 }
 
-message state_msg
+message state_response
 {
     enum RaftState {
         ELECTION = 0;
