@@ -137,11 +137,17 @@ options::get_bootstrap_peers_url() const
     return this->config_data[BOOTSTRAP_PEERS_URL_KEY].asString();
 }
 
-
 bzn::uuid_t
 options::get_uuid() const
 {
-    return this->config_data["uuid"].asString();
+    return this->config_data[NODE_UUID].asString();
+}
+
+
+bzn::uuid_t
+options::get_swarm_uuid() const
+{
+    return this->config_data[SWARM_UUID].asString();
 }
 
 
