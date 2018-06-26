@@ -35,6 +35,7 @@ namespace
     const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
     const std::string MONITOR_ADDRESS_KEY        = "monitor_address";
     const std::string MONITOR_PORT_KEY           = "monitor_port";
+    const std::string NODE_UUID                  = "uuid";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -141,13 +142,6 @@ bzn::uuid_t
 options::get_uuid() const
 {
     return this->config_data[NODE_UUID].asString();
-}
-
-
-bzn::uuid_t
-options::get_swarm_uuid() const
-{
-    return this->config_data[SWARM_UUID].asString();
 }
 
 
