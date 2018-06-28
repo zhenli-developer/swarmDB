@@ -138,8 +138,6 @@ namespace bzn
         void notify_leader_status();
         void notify_commit(size_t log_index, const std::string& operation);
 
-        //uint32_t last_log_index();
-
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;

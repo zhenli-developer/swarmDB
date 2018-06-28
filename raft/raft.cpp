@@ -349,7 +349,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         success = false;
     }
 
-    auto match_index = std::min(this->log_entries.size(), (size_t) msg_index+1);
+    size_t match_index = std::min(this->log_entries.size(), (size_t) msg_index+1);
 
     auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, match_index));
 
