@@ -310,7 +310,6 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
     // Accept the message if its previous index and previous term are consistent with our log
     if (leader_prev_index < this->log_entries.size() && this->log_entries[leader_prev_index].term == leader_prev_term)
     {
-        LOG(debug) << "Accepting AppendEntries";
         success = true;
 
         // We are accepting the message, so we must throw out anything that conflicts with it
@@ -330,7 +329,6 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         // If it has data but our log is longer, raft guarentees that the data is the same.
         if (!msg["data"]["entries"].empty() && msg_index == this->log_entries.size())
         {
-            LOG(debug) << "Appending the entry in the AppendEntries";
             this->log_entries.emplace_back(
                     log_entry{bzn::log_entry_type::log_entry, uint32_t(this->log_entries.size()), entry_term, msg["data"]["entries"]});
         }
