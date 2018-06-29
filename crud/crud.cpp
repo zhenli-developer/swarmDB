@@ -54,6 +54,12 @@ crud::start()
                 {
                     bzn_msg msg;
 
+                    // TODO: This is a hack to stop a crash
+                    if(!ws_msg["msg"].isString())
+                    {
+                        return true;
+                    }
+
                     if (msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
                     {
                         if (msg.msg_case() == bzn_msg::kDb)

@@ -104,8 +104,9 @@ raft::start()
         {
             this->start_election_timer();
 
-            this->node->register_for_message("raft", std::bind(&raft::handle_ws_raft_messages, shared_from_this(),
-                std::placeholders::_1, std::placeholders::_2));
+            this->node->register_for_message(
+                    "raft"
+                    , std::bind(&raft::handle_ws_raft_messages, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
         });
 }
 
@@ -380,8 +381,10 @@ bzn::message
 raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer)
 {
     bzn::message joint_quorum;
-    joint_quorum["old"] = joint_quorum["new"] = last_quorum_message;
-    joint_quorum["new"].append(new_peer);
+    bzn::message peers;
+    peers["old"] = peers["new"] = last_quorum_message["msg"]["peers"];
+    peers["new"].append(new_peer);
+    joint_quorum["msg"]["peers"] = peers;
     return joint_quorum;
 }
 
@@ -389,7 +392,9 @@ raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message
 bzn::message
 raft::create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum)
 {
-    return joint_quorum["new"];
+    bzn::message single_quorum;
+    single_quorum["msg"]["peers"] = joint_quorum["msg"]["peers"]["new"];
+    return single_quorum;
 }
 
 
@@ -397,13 +402,15 @@ bzn::message
 raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_message, const bzn::uuid_t& peer_uuid)
 {
     bzn::message joint_quorum;
-    joint_quorum["old"] = last_quorum_message;
-    std::for_each(last_quorum_message.begin(), last_quorum_message.end(),
+    const auto& peers = last_quorum_message["msg"]["peers"];
+    joint_quorum["msg"]["peers"]["old"] = peers;
+
+    std::for_each(peers.begin(), peers.end(),
                   [&](const auto& p)
                   {
                       if(p["uuid"]!=peer_uuid)
                       {
-                          joint_quorum["new"].append(p);
+                          joint_quorum["msg"]["peers"]["new"].append(p);
                       }
                   });
     return joint_quorum;
@@ -436,12 +443,12 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
-        const auto& same_peer = std::find_if(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
+        const auto& same_peer = std::find_if(last_quorum_entry.msg["msg"]["peers"].begin(), last_quorum_entry.msg["msg"]["peers"].end(),
                 [&](const auto& p)
                 {
                     return p["uuid"].asString() == msg["data"]["peer"]["uuid"].asString();
                 });
-        if(same_peer != last_quorum_entry.msg.end())
+        if(same_peer != last_quorum_entry.msg["msg"]["peers"].end())
         {
             bzn::message response;
             response["error"] = ERROR_PEER_ALREADY_EXISTS;
@@ -472,12 +479,15 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
-        const auto& same_peer = std::find_if(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
-                                             [&](const auto& p)
-                                             {
-                                                 return p["uuid"].asString() == msg["data"]["uuid"].asString();
-                                             });
-        if(same_peer == last_quorum_entry.msg.end())
+        const auto& peers = last_quorum_entry.msg["msg"]["peers"];
+        const auto& same_peer = std::find_if(
+                peers.begin()
+                , peers.end()
+                , [&](const auto& p)
+                {
+                    return p["uuid"].asString() == msg["data"]["uuid"].asString();
+                });
+        if(same_peer == peers.end())
         {
             bzn::message response;
             response["error"] = ERROR_PEER_NOT_FOUND;
@@ -987,24 +997,34 @@ raft::get_active_quorum()
 
     bzn::log_entry log_entry = this->last_quorum();
     switch(log_entry.entry_type) {
-        case bzn::log_entry_type::single_quorum: {
-            std::set<bzn::uuid_t> result;
-            std::transform(log_entry.msg.begin(), log_entry.msg.end(), std::inserter(result, result.begin()),
-                           extract_uuid);
-
-            return std::list<std::set<bzn::uuid_t>>{result};
-        }
-        case bzn::log_entry_type::joint_quorum: {
-            std::set<bzn::uuid_t> result_old, result_new;
-            std::transform(log_entry.msg["old"].begin(), log_entry.msg["old"].end(),
-                           std::inserter(result_old, result_old.begin()),
-                           extract_uuid);
-            std::transform(log_entry.msg["new"].begin(), log_entry.msg["new"].end(),
-                           std::inserter(result_new, result_new.begin()),
-                           extract_uuid);
-
+        case bzn::log_entry_type::single_quorum:
+            {
+                const auto& peers = log_entry.msg["msg"]["peers"];
+                std::set<bzn::uuid_t> result;
+                std::transform(
+                        peers.begin()
+                        , peers.end()
+                        , std::inserter(result, result.begin()),
+                        extract_uuid);
+                return std::list<std::set<bzn::uuid_t>>{result};
+            }
+            break;
+        case bzn::log_entry_type::joint_quorum:
+            {
+                std::set<bzn::uuid_t> result_old, result_new;
+                const auto& old_jpeers = log_entry.msg["msg"]["peers"]["old"];
+                const auto& new_jpeers = log_entry.msg["msg"]["peers"]["new"];
+                std::transform(old_jpeers.begin()
+                        , old_jpeers.end()
+                        , std::inserter(result_old, result_old.begin())
+                        , extract_uuid);
+            std::transform(new_jpeers.begin()
+                    , new_jpeers.end()
+                    , std::inserter(result_new, result_new.begin())
+                    , extract_uuid);
             return std::list<std::set<bzn::uuid_t>>{result_old, result_new};
-        }
+            }
+            break;
         default:
             throw std::runtime_error("last_quorum gave something that's not a quorum");
     }
@@ -1040,12 +1060,12 @@ raft::get_all_peers()
 
     if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
     {
-        all_peers.emplace_back(log_entry.msg);
+        all_peers.emplace_back(log_entry.msg["msg"]["peers"]);
     }
     else
     {
-        all_peers.emplace_back(log_entry.msg["old"]);
-        all_peers.emplace_back(log_entry.msg["new"]);
+        all_peers.emplace_back(log_entry.msg["msg"]["peers"]["old"]);
+        all_peers.emplace_back(log_entry.msg["msg"]["peers"]["new"]);
     }
 
     for(auto jpeers : all_peers)
@@ -1082,6 +1102,7 @@ void
 raft::create_state_files(const bzn::peers_list_t& peers)
 {
     bzn::message root;
+    root["msg"] = bzn::message();
     for(const auto& p : peers)
     {
         bzn::message peer;
@@ -1090,7 +1111,7 @@ raft::create_state_files(const bzn::peers_list_t& peers)
         peer["http_port"] = p.http_port;
         peer["name"] = p.name;
         peer["uuid"] = p.uuid;
-        root.append(peer);
+        root["msg"]["peers"].append(peer);
     }
     const bzn::log_entry entry{
             bzn::log_entry_type::single_quorum,

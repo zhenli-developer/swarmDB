@@ -948,17 +948,19 @@ namespace bzn
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
         EXPECT_EQ(raft.log_entries.size(), static_cast<size_t>(1));
         EXPECT_EQ(raft.log_entries.front().entry_type, bzn::log_entry_type::single_quorum);
-        bzn::message json_quorum = raft.log_entries.front().msg;
+        bzn::message json_quorum = raft.log_entries.front().msg["msg"]["peers"];
         EXPECT_EQ(json_quorum.size(), TEST_PEER_LIST.size());
 
-        std::for_each(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer) {
-            EXPECT_TRUE(
-                    std::find_if(json_quorum.begin(), json_quorum.end(), [&](const auto& jp)
+        std::for_each(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer)
+        {
+            const auto& found = std::find_if(
+                    json_quorum.begin()
+                    , json_quorum.end()
+                    , [&](const auto& jp)
                     {
                         return peer.uuid == jp["uuid"].asString();
-                    })
-                    != json_quorum.end()
-            );
+                    });
+            EXPECT_TRUE(found !=  json_quorum.end());
         });
     }
 
@@ -1226,7 +1228,7 @@ namespace bzn
         bzn::log_entry entry = raft->last_quorum();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
-        bzn::message jq{entry.msg};
+        bzn::message jq{entry.msg["msg"]["peers"]};
 
         EXPECT_TRUE(jq.isMember("old"));
         EXPECT_TRUE(jq.isMember("new"));
@@ -1313,7 +1315,7 @@ namespace bzn
         bzn::log_entry entry = raft->last_quorum();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
-        bzn::message jq{entry.msg};
+        bzn::message jq{entry.msg["msg"]["peers"]};
 
         EXPECT_TRUE(jq.isMember("old"));
         EXPECT_TRUE(jq.isMember("new"));
@@ -1456,11 +1458,35 @@ namespace bzn
         EXPECT_EQ(TEST_PEER_LIST,peers);
 
         // replace the last quorum with a joint quorum
-        bzn::message add_peer = make_add_peer_request();
         raft.current_state = bzn::raft_state::leader;
-        raft.handle_ws_raft_messages(add_peer, nullptr);
+        raft.handle_ws_raft_messages(make_add_peer_request(), nullptr);
 
-        EXPECT_EQ(raft.get_active_quorum().size(), size_t(2));
+        const auto& active = raft.get_active_quorum();
+        EXPECT_EQ(active.size(), size_t(2));
+
+        std::for_each(TEST_PEER_LIST.begin()
+                , TEST_PEER_LIST.end()
+                , [&](const auto& peer)
+                      {
+                          for(const auto& quorum_uuids : active)
+                          {
+                              const auto& found = std::find_if(
+                                      quorum_uuids.begin()
+                                      , quorum_uuids.end()
+                                      ,[&](const auto& uuid)
+                                      {
+                                          return peer.uuid == uuid;
+                                      });
+                              EXPECT_TRUE(found != quorum_uuids.end());
+                          }
+                      });
+        const auto& new_set = active.back();
+        EXPECT_EQ(new_set.size(), size_t(4));
+        const auto& new_peer_uuid = std::find_if(new_set.begin(), new_set.end(),[&](const auto& u)
+                {
+                    return u == new_peer.uuid;
+                });
+        EXPECT_EQ(*new_peer_uuid, new_peer.uuid);
 
         peers = raft.get_all_peers();
         EXPECT_EQ(peers.size(), TEST_PEER_LIST.size() + 1);
@@ -1489,7 +1515,13 @@ namespace bzn
                        });
 
         std::set<bzn::uuid_t> peer_set;
-        std::set_intersection(expected_peers.begin(), expected_peers.end(), peers.begin(), peers.end(), std::inserter(peer_set,peer_set.begin()));
+        std::set_intersection(
+                expected_peers.begin()
+                , expected_peers.end()
+                , peers.begin()
+                , peers.end()
+                , std::inserter(peer_set,peer_set.begin()));
+
         EXPECT_EQ(peer_set.size(), TEST_PEER_LIST.size());
 
         // replace the last quorum with a joint quorum
@@ -1506,6 +1538,7 @@ namespace bzn
         EXPECT_EQ(new_peers.size(), size_t(4));
 
         peer_set.clear();
+
 
         std::set_difference(new_peers.begin(), new_peers.end()
                 , old_peers.begin(), old_peers.end()
