@@ -24,13 +24,23 @@ namespace bzn
     const std::string MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_IN_LOG{"ENCOUNTERED_INVALID_ENTRY_IN_LOG"};
     const std::string MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_TYPE_IN_LOG{"ENCOUNTERED_INVALID_ENTRY_TYPE_IN_LOG"};
 
+    const std::string LOG_ENTRY_TYPES[]{"log_entry", "single_quorum", "joint_quorum", "undefined"};
+
+
     enum class log_entry_type : uint8_t
     {
-        log_entry,
+        log_entry = 0,
         single_quorum,
         joint_quorum,
         undefined
     };
+    
+
+    inline std::string
+    log_entry_type_to_string(const log_entry_type entry_type)
+    {
+        return bzn::LOG_ENTRY_TYPES[size_t(entry_type)];
+    }
 
 
     struct log_entry

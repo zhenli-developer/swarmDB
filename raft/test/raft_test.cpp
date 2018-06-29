@@ -1681,4 +1681,13 @@ namespace bzn
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::single_quorum);
     }
 
+
+    TEST(raft, test_log_entry_type_to_string)
+    {
+        EXPECT_EQ(bzn::LOG_ENTRY_TYPES[0], bzn::log_entry_type_to_string(bzn::log_entry_type::log_entry));
+        EXPECT_EQ(bzn::LOG_ENTRY_TYPES[1], bzn::log_entry_type_to_string(bzn::log_entry_type::single_quorum));
+        EXPECT_EQ(bzn::LOG_ENTRY_TYPES[2], bzn::log_entry_type_to_string(bzn::log_entry_type::joint_quorum));
+        EXPECT_EQ(bzn::LOG_ENTRY_TYPES[3], bzn::log_entry_type_to_string(bzn::log_entry_type::undefined));
+    }
+
 } // bzn

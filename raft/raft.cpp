@@ -749,7 +749,7 @@ raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry
         return false;
     }
 
-    LOG(debug) << "Appending to my log: " << msg.toStyledString();
+    LOG(debug) << "Appending " << log_entry_type_to_string(entry_type) << " to my log: " << msg.toStyledString();
 
     this->log_entries.emplace_back(log_entry{entry_type, uint32_t(this->log_entries.size()), this->current_term, msg});
 
