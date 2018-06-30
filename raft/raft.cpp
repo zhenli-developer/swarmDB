@@ -54,8 +54,11 @@ raft::raft(
     this->setup_peer_tracking(peers);
     this->get_raft_timeout_scale();
 
-    this->state_files_exist() ? this->import_state_files()
-                               : this->create_state_files(peers);
+    const std::string log_path("./.state/" + this->uuid + ".dat");
+    this->state_files_exist() ? this->load_state()
+                               : this->create_state_files(log_path, peers);
+
+    this->raft_log = std::make_shared<bzn::raft_log>(log_path);
 }
 
 
@@ -187,7 +190,7 @@ raft::request_vote_request()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->log_entries.size(), this->last_log_term)));
+            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->raft_log->size(), this->last_log_term)));
         }
         catch(const std::exception& ex)
         {
@@ -276,7 +279,7 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
     // vote for this peer...
     this->voted_for = msg["data"]["from"].asString();
 
-    bool vote = msg["data"]["lastLogIndex"].asUInt() >= this->log_entries.size();
+    bool vote = msg["data"]["lastLogIndex"].asUInt() >= this->raft_log->size();
 
     session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), true);
 }
@@ -308,36 +311,22 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
     uint32_t msg_index = leader_prev_index + 1;
 
     // Accept the message if its previous index and previous term are consistent with our log
-    if (leader_prev_index < this->log_entries.size() && this->log_entries[leader_prev_index].term == leader_prev_term)
+    if (this->raft_log->entry_accepted(leader_prev_index, leader_prev_term))
     {
         success = true;
 
-        // We are accepting the message, so we must throw out anything that conflicts with it
-        if(msg_index < this->log_entries.size() // Our log includes the payload message
-           && entry_term != this->log_entries[msg_index].term) // but is not consistent with it
-        {
-            LOG(debug) << "Discarding " << msg_index - log_entries.size() << " conflicting messages";
-            // Throw out everything until we get to the prev. message, which we agreed was consistent
-            while (leader_prev_index < this->log_entries.size() - 1)
-            {
-                // TODO: These need to be deleted on disk as well!
-                this->log_entries.pop_back();
-            }
-        }
-
         // Now if the message actually has data, and we don't have that data, we can append it.
         // If it has data but our log is longer, raft guarentees that the data is the same.
-        if (!msg["data"]["entries"].empty() && msg_index == this->log_entries.size())
+        if (!msg["data"]["entries"].empty() )
         {
-            this->log_entries.emplace_back(
-                    log_entry{bzn::log_entry_type::log_entry, uint32_t(this->log_entries.size()), entry_term, msg["data"]["entries"]});
+            this->raft_log->follower_insert_entry(msg_index, log_entry{raft::deduce_type_from_message(msg["data"]["entries"]), msg_index, entry_term, msg["data"]["entries"]});
         }
     }
     else
     {
         // We don't agree with or don't have the previous index the leader thinks we have, so saying no will
         // tell the leader to send older data
-        if (leader_prev_index < this->log_entries.size())
+        if (leader_prev_index < this->raft_log->size())
         {
             LOG(debug) << "Rejecting AppendEntries because I do not have the previous index";
         }
@@ -348,7 +337,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         success = false;
     }
 
-    size_t match_index = std::min(this->log_entries.size(), (size_t) msg_index+1);
+    size_t match_index = std::min(this->raft_log->size(), (size_t) msg_index+1);
 
     auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, match_index));
 
@@ -361,9 +350,9 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
     {
         if (this->commit_index < msg["data"]["commitIndex"].asUInt())
         {
-            for(size_t i = this->commit_index; i < std::min(this->log_entries.size(), size_t(msg["data"]["commitIndex"].asUInt())); ++i)
+            for(size_t i = this->commit_index; i < std::min(this->raft_log->size(), size_t(msg["data"]["commitIndex"].asUInt())); ++i)
             {
-                this->perform_commit(commit_index, this->log_entries[i]);
+                this->perform_commit(commit_index, this->raft_log->entry_at(i));
             }
         }
     }
@@ -432,7 +421,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
-        bzn::log_entry last_quorum_entry = this->last_quorum();
+        bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
         if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
         {
             bzn::message response;
@@ -468,7 +457,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
-        bzn::log_entry last_quorum_entry = this->last_quorum();
+        bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
         if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
         {
             bzn::message response;
@@ -550,7 +539,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
                 // TODO: We should either process this message properly, or just drop it after updating term
                 this->leader = msg["data"]["from"].asString();
 
-                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, false, this->log_entries.size()));
+                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, false, this->raft_log->size()));
 
                 LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -617,7 +606,7 @@ raft::notify_leader_status()
     audit_message msg;
     msg.mutable_leader_status()->set_term(this->current_term);
     msg.mutable_leader_status()->set_leader(this->uuid);
-    msg.mutable_leader_status()->set_current_log_index(this->log_entries.size());
+    msg.mutable_leader_status()->set_current_log_index(this->raft_log->size());
     msg.mutable_leader_status()->set_current_commit_index(this->commit_index);
 
     auto json_ptr = std::make_shared<bzn::message>();
@@ -673,19 +662,19 @@ raft::request_append_entries()
             uint32_t prev_term{};
             uint32_t entry_term{};
 
-            if (this->peer_match_index[peer.uuid] < this->log_entries.size())
+            if (this->peer_match_index[peer.uuid] < this->raft_log->size())
             {
                 auto index = this->peer_match_index[peer.uuid];
                 prev_index = index-1;
-                prev_term = this->log_entries[prev_index].term;
+                prev_term = this->raft_log->entry_at(prev_index).term;
 
-                msg = this->log_entries[index].msg;
-                entry_term = this->log_entries[index].term;
+                msg = this->raft_log->entry_at(index).msg;
+                entry_term = this->raft_log->entry_at(index).term;
             }
             else
             {
-                prev_index = this->log_entries.size()-1;
-                prev_term = this->log_entries[prev_index].term;
+                prev_index = this->raft_log->size()-1;
+                prev_term = this->raft_log->entry_at(prev_index).term;
             }
 
             // todo: use resolver on hostname...
@@ -718,7 +707,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
     }
 
     // check match index for bad peers...
-    if (msg["data"]["matchIndex"].asUInt() > this->log_entries.size() ||
+    if (msg["data"]["matchIndex"].asUInt() > this->raft_log->size() ||
         msg["data"]["term"].asUInt() != this->current_term)
     {
         LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
@@ -735,7 +724,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 
     while (this->commit_index < this->last_majority_replicated_log_index())
     {
-        this->perform_commit(this->commit_index, this->log_entries[this->commit_index]);
+        this->perform_commit(this->commit_index, this->raft_log->entry_at(this->commit_index));
     }
 }
 
@@ -751,7 +740,7 @@ raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry
 
     LOG(debug) << "Appending " << log_entry_type_to_string(entry_type) << " to my log: " << msg.toStyledString();
 
-    this->log_entries.emplace_back(log_entry{entry_type, uint32_t(this->log_entries.size()), this->current_term, msg});
+    this->raft_log->leader_append_entry(log_entry{entry_type, uint32_t(this->raft_log->size()), this->current_term, msg});
 
     return true;
 }
@@ -817,7 +806,7 @@ raft::get_leader()
 void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
-    for (const auto& log_entry : this->log_entries)
+    for (const auto& log_entry : this->raft_log->get_log_entries())
     {
         if(log_entry.entry_type == bzn::log_entry_type::log_entry)
         {
@@ -845,23 +834,6 @@ std::string
 raft::entries_log_path()
 {
     return "./.state/" + this->get_uuid() +".dat";
-}
-
-
-void
-raft::append_entry_to_log(const bzn::log_entry& log_entry)
-{
-    if (!this->log_entry_out_stream.is_open())
-    {
-        boost::filesystem::path path{this->entries_log_path()};
-        if(!boost::filesystem::exists(path.parent_path()))
-        {
-            boost::filesystem::create_directories(path.parent_path());
-        }
-        this->log_entry_out_stream.open(path.string(), std::ios::out |  std::ios::binary | std::ios::app);
-    }
-    this->log_entry_out_stream << log_entry;
-    this->log_entry_out_stream.flush();
 }
 
 
@@ -906,29 +878,10 @@ raft::load_state()
 
 
 void
-raft::load_log_entries()
-{
-    std::ifstream is(this->entries_log_path(), std::ios::in | std::ios::binary);
-    bzn::log_entry log_entry;
-    while (is >> log_entry)
-    {
-        this->log_entries.emplace_back(log_entry);
-    }
-    is.close();
-
-    if (this->log_entries.empty())
-    {
-        throw std::runtime_error(MSG_ERROR_EMPTY_LOG_ENTRY_FILE);
-    }
-}
-
-
-void
 raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
 {
     this->notify_commit(commit_index, log_entry.json_to_string(log_entry.msg));
     this->commit_handler(log_entry.msg);
-    this->append_entry_to_log(log_entry);
     commit_index++;
     this->save_state();
 
@@ -938,25 +891,6 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
                 this->create_single_quorum_from_joint_quorum(log_entry.msg),
                 bzn::log_entry_type::single_quorum);
     }
-}
-
-
-bzn::log_entry
-raft::last_quorum()
-{
-    // TODO: Speed this up by not doing a search, when a quorum entry is added, simply store the index. Perhaps only do the search if the index is wrong.
-    auto result = std::find_if(
-            this->log_entries.crbegin(),
-            this->log_entries.crend(),
-            [](const auto& entry)
-            {
-                return entry.entry_type != bzn::log_entry_type::log_entry;
-            });
-    if(result == this->log_entries.crend())
-    {
-        throw std::runtime_error(MSG_NO_PEERS_IN_LOG);
-    }
-    return *result;
 }
 
 
@@ -993,7 +927,7 @@ raft::get_active_quorum()
             return node_json["uuid"].asString();
         };
 
-    bzn::log_entry log_entry = this->last_quorum();
+    bzn::log_entry log_entry = this->raft_log->last_quorum_entry();
     switch(log_entry.entry_type) {
         case bzn::log_entry_type::single_quorum:
             {
@@ -1054,7 +988,7 @@ raft::get_all_peers()
 {
     bzn::peers_list_t result;
     std::vector<std::reference_wrapper<bzn::message>> all_peers;
-    bzn::log_entry log_entry = this->last_quorum();
+    bzn::log_entry log_entry = this->raft_log->last_quorum_entry();
 
     if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
     {
@@ -1097,7 +1031,7 @@ raft::in_quorum(const bzn::uuid_t& uuid)
 
 
 void
-raft::create_state_files(const bzn::peers_list_t& peers)
+raft::create_state_files(const std::string& log_path, const bzn::peers_list_t& peers)
 {
     bzn::message root;
     root["msg"] = bzn::message();
@@ -1111,24 +1045,25 @@ raft::create_state_files(const bzn::peers_list_t& peers)
         peer["uuid"] = p.uuid;
         root["msg"]["peers"].append(peer);
     }
+
     const bzn::log_entry entry{
             bzn::log_entry_type::single_quorum,
             0,
             0,
             root};
-
-    this->log_entries.emplace_back(entry);
-    this->append_entry_to_log(entry);
+    std::ofstream os( log_path ,std::ios::out | std::ios::binary);
+    os << entry;
+    os.close();
     this->save_state();
 }
+
 
 void
 raft::import_state_files()
 {
     this->load_state();
-    this->load_log_entries();
-    const auto& last_entry = this->log_entries.back();
-    if (last_entry.log_index!=this->log_entries.size()-1 || last_entry.term!=this->current_term)
+    const auto& last_entry = this->raft_log->get_log_entries().back();
+    if (last_entry.log_index!=this->raft_log->size()-1 || last_entry.term!=this->current_term)
     {
         throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
     }
@@ -1140,4 +1075,25 @@ raft::state_files_exist()
 {
     return boost::filesystem::exists(this->state_path())
            && boost::filesystem::exists(this->entries_log_path());
+}
+
+
+bzn::log_entry_type
+raft::deduce_type_from_message(const bzn::message& message)
+{
+    if(message["msg"].isString())
+    {
+        return bzn::log_entry_type::log_entry;
+    }
+
+    if(message["msg"]["peers"].isArray())
+    {
+        return bzn::log_entry_type::single_quorum;
+    }
+
+    if(message["msg"]["peers"].isMember("new"))
+    {
+        return bzn::log_entry_type::joint_quorum;
+    }
+    return bzn::log_entry_type::undefined;
 }

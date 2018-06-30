@@ -26,6 +26,8 @@
 #include <optional>
 #else
 #include <experimental/optional>
+#include "raft_log.hpp"
+
 #endif
 
 namespace
@@ -111,16 +113,13 @@ namespace bzn
         // helpers...
         void get_raft_timeout_scale();
 
-        void append_entry_to_log(const bzn::log_entry& log_entry);
         std::string entries_log_path();
-        void load_log_entries();
         std::string state_path();
         void save_state();
         void load_state();
         void import_state_files();
-        void create_state_files(const bzn::peers_list_t& peers);
+        void create_state_files(const std::string& log_path, const bzn::peers_list_t& peers);
         bool state_files_exist();
-
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
         bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
         bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
@@ -133,10 +132,9 @@ namespace bzn
         bool in_quorum(const bzn::uuid_t& uuid);
         bzn::peers_list_t get_all_peers();
 
-        bzn::log_entry last_quorum();
-
         void notify_leader_status();
         void notify_commit(size_t log_index, const std::string& operation);
+        bzn::log_entry_type deduce_type_from_message(const bzn::message& message);
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
@@ -155,7 +153,6 @@ namespace bzn
         uint32_t commit_index   = 1;
         uint32_t timeout_scale  = 1;
 
-        std::vector<log_entry> log_entries;
         bzn::raft_base::commit_handler commit_handler;
 
         // track peer's match index...
@@ -170,7 +167,7 @@ namespace bzn
 
         std::mutex raft_lock;
 
-        std::ofstream log_entry_out_stream;
+        std::shared_ptr<bzn::raft_log> raft_log;
 
         bool enable_audit = true;
     };
