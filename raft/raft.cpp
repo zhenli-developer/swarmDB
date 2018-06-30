@@ -1033,6 +1033,12 @@ raft::in_quorum(const bzn::uuid_t& uuid)
 void
 raft::create_state_files(const std::string& log_path, const bzn::peers_list_t& peers)
 {
+    const boost::filesystem::path path(log_path);
+    if(!boost::filesystem::exists(path.parent_path()))
+    {
+        boost::filesystem::create_directories(path.parent_path());
+    }
+
     bzn::message root;
     root["msg"] = bzn::message();
     for(const auto& p : peers)
@@ -1046,12 +1052,13 @@ raft::create_state_files(const std::string& log_path, const bzn::peers_list_t& p
         root["msg"]["peers"].append(peer);
     }
 
-    const bzn::log_entry entry{
-            bzn::log_entry_type::single_quorum,
-            0,
-            0,
-            root};
+    const bzn::log_entry entry{bzn::log_entry_type::single_quorum, 0, 0, root};
+
     std::ofstream os( log_path ,std::ios::out | std::ios::binary);
+    if(!os)
+    {
+        throw std::runtime_error(ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING + log_path);
+    }
     os << entry;
     os.close();
     this->save_state();

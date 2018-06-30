@@ -36,6 +36,7 @@ namespace
     const std::string MSG_ERROR_CURRENT_QUORUM_IS_JOINT = "A peer cannot be added or removed until the last quorum change request has been processed.";
     const std::string ERROR_PEER_ALREADY_EXISTS = "ERROR_PEER_ALREADY_EXISTS";
     const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
+    const std::string ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING = "Unable to open log file for writing: ";
 }
 
 
