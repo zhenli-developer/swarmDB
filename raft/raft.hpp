@@ -18,6 +18,7 @@
 #include <bootstrap/bootstrap_peers.hpp>
 #include <raft/raft_base.hpp>
 #include <raft/log_entry.hpp>
+#include <raft/raft_log.hpp>
 #include <storage/storage.hpp>
 #include <gtest/gtest_prod.h>
 #include <fstream>
@@ -26,8 +27,6 @@
 #include <optional>
 #else
 #include <experimental/optional>
-#include "raft_log.hpp"
-
 #endif
 
 namespace

@@ -3,7 +3,9 @@ add_library(raft
         raft_base.hpp
         raft.cpp
         raft.hpp
-        raft_log.cpp raft_log.hpp)
+        raft_log.cpp
+        raft_log.hpp
+        )
 
 target_link_libraries(raft proto)
 add_dependencies(raft jsoncpp)
