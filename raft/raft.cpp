@@ -319,6 +319,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         // If it has data but our log is longer, raft guarentees that the data is the same.
         if (!msg["data"]["entries"].empty() )
         {
+            LOG(debug) << "Follower inserting entry with message index:" << msg_index;
             this->raft_log->follower_insert_entry(msg_index, log_entry{raft::deduce_type_from_message(msg["data"]["entries"]), msg_index, entry_term, msg["data"]["entries"]});
         }
     }
@@ -402,6 +403,9 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
                   });
     return joint_quorum;
 }
+
+
+
 
 
 void
