@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 
+# https://github.com/bluzelle/pyBluzelle
+
 import os
 import shutil
 import json
@@ -7,7 +9,6 @@ import uuid
 import sys
 import subprocess
 import threading
-import copy
 
 from swint.Peer import Peer
 from swint.Node import Node
@@ -151,6 +152,7 @@ def print_all_instructions(swarm):
 
 
 def main():
+    # TODO make these real options
     n = 3
     root_folder = "./test"
 
@@ -180,7 +182,54 @@ def main():
 
     #### print_all_instructions(swarm)
 
-    # TODO start all daemons
+    # TODO start daemons in separate threads
+    # ./test/peer<int>
+    # ./swarm -c peer.json
+    # subprocess.call(["swarm", "-c", "peer.json"])
+    #
+
+
+    for info in swarm:
+        peer = info['peer']
+        exec_path = root_folder +"/" + peer.name + "/swarm"
+        info['thread'] = threading.Thread(....)
+
+
+
+
+
+
+
+
+    # TODO create a thread to test the swarm by submitting an intelligently created command to one of the nodes once a second
+
+    # TODO Need some way of shutting down, each daemon must be terminated
+
+    # TODO React to the Audit functionality use pytest
+
+    # TODO Inspect the entry logs in the .state folder to ensure the node is valid
+
+
+
+
+    # example task:
+    #  - calculate the fibonacci sequence and store the results in the swarm
+    #  - add/remove a peer but keep the minimum swarm size to 2
+    #  - store f(0):0 and f(1):1
+    #  - to calculate f(<n>) read f(<n-1>) and f(<n-2>) from the swarm and store the value of f(<n>)
+    #  - when the sequence reaches f(50) start deleting older values
+    #  - need to test update somehow: change f(3) to f(3):f(1)+f(1) ?
+    #  - use has and keys to validate the contents of the swarm
+
+
+
+
+
+
+
+
+
+
     print (swarm[0]['peer'].to_json())
     print (swarm[0]['node'].to_json())
 
