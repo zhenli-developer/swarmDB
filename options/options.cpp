@@ -14,6 +14,8 @@
 
 #include <options/options.hpp>
 #include <boost/program_options.hpp>
+#include <boost/lexical_cast.hpp>
+#include <regex>
 #include <iostream>
 #include <fstream>
 #include <swarm_version.hpp>
@@ -39,12 +41,17 @@ namespace
     const std::string NODE_UUID                  = "uuid";
     const std::string AUDIT_MEM_SIZE_KEY         = "audit_mem_size";
     const std::string STATE_DIR_KEY              = "state_dir";
+    const std::string MAX_STORAGE_KEY            = "max_storage";
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
     const size_t DEFAULT_AUDIT_MEM_SIZE          = 10000;
 
     const std::string DEFAULT_STATE_DIR          = "./.state/";
 
+    // The default maximum allowed storage for a node is 2G
+    const size_t DEFAULT_MAX_STORAGE_SIZE        = 2147483648;
+    
+    
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
     {
@@ -73,7 +80,6 @@ options::parse_command_line(int argc, const char* argv[])
     {
         return this->validate();
     }
-
     return false;
 }
 
@@ -349,4 +355,30 @@ options::parse(int argc, const char* argv[])
     }
 
     return true;
+}
+
+
+size_t
+options::get_max_storage() const
+{
+    size_t value = DEFAULT_MAX_STORAGE_SIZE;
+
+    if(this->config_data.isMember(MAX_STORAGE_KEY))
+    {
+        const std::string max_storage{this->config_data[MAX_STORAGE_KEY].asString()};
+        const std::regex expr{"(\\d+)([K,M,G,T]?[B]?)"};
+        std::smatch base_match;
+
+        if(std::regex_match(max_storage, base_match, expr))
+        {
+            std::string suffix = base_match[2];
+            value = boost::lexical_cast<size_t>(base_match[1])
+                    * bzn::BYTE_SUFFIXES.at(suffix.empty() ? 'B' : suffix[0]);
+        }
+        else
+        {
+            throw std::runtime_error(std::string("\nUnable to parse max storage value from options: " + max_storage));
+        }
+    }
+    return value;
 }
