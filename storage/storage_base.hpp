@@ -71,5 +71,7 @@ namespace bzn
         virtual bool has(const bzn::uuid_t& uuid, const  std::string& key) = 0;
 
         virtual std::size_t get_size(const bzn::uuid_t& uuid) = 0;
+
+        virtual std::size_t get_total_size() = 0;
     };
 } // bzn

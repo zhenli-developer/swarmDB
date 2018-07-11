@@ -103,6 +103,7 @@ namespace bzn
     void
     raft_log::follower_insert_entry(size_t index, const bzn::log_entry& log_entry)
     {
+        // case -1: the log has run out of space
         // case 0: the index is in the log and we agree
         // case 1: the index is in the log and we disagree
         // case 2: the index is right after the log

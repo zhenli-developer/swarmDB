@@ -46,6 +46,8 @@ namespace bzn
 
         std::size_t get_size(const bzn::uuid_t& uuid) override;
 
+        std::size_t get_total_size() override;
+
     private:
         friend class boost::serialization::access;
 

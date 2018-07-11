@@ -18,6 +18,7 @@
 #include <boost/chrono.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
@@ -307,5 +308,27 @@ TEST_F(storageTest, test_that_storage_fails_to_update_with_a_value_that_exceeds_
     bad_value.resize(bzn::MAX_VALUE_SIZE+1, 'c');
     EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
     EXPECT_EQ(expected_value, this->storage->read(USER_UUID, KEY)->value);
+}
+
+
+TEST_F(storageTest, test_that_get_total_storage_returns_actual_total_storage)
+{
+    boost::uuids::random_generator gen;
+    std::vector<std::string> uuids(100);
+    std::for_each(uuids.begin(), uuids.end(), [&](auto& uuid){uuid=boost::uuids::to_string(gen());});
+
+    size_t accepted_total_size = 0;
+    std::for_each(uuids.begin()
+            , uuids.end()
+            , [&](const auto &uuid)
+                  {
+                      for(int i=0; i<100; ++i)
+                      {
+                          const std::string key{"key" + std::to_string(i)};
+                          this->storage->create(uuid, key, generate_test_string());
+                          accepted_total_size += storage->read(uuid, key)->value.size();
+                      }
+                  });
+    EXPECT_EQ(accepted_total_size, this->storage->get_total_size());
 }
 

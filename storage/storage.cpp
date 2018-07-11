@@ -18,6 +18,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <numeric>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/lexical_cast.hpp>
@@ -245,3 +246,16 @@ storage::get_size(const bzn::uuid_t& uuid)
     return usage;
 }
 
+
+std::size_t
+storage::get_total_size()
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    return std::reduce(this->kv_store.begin()
+            , this->kv_store.end()
+            , size_t{0}
+            , [&](const size_t init, const auto& pair)->size_t
+                       {
+                           return init + this->get_size(pair.first);
+                       });
+}

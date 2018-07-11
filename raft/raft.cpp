@@ -407,9 +407,6 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
 }
 
 
-
-
-
 void
 raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
@@ -601,6 +598,7 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
     this->notify_leader_status();
 }
 
+
 void
 raft::notify_leader_status()
 {
@@ -626,6 +624,7 @@ raft::notify_leader_status()
     }
 }
 
+
 void
 raft::notify_commit(size_t log_index, const std::string& operation)
 {
@@ -649,6 +648,7 @@ raft::notify_commit(size_t log_index, const std::string& operation)
         this->node->send_message(ep, json_ptr);
     }
 }
+
 
 void
 raft::request_append_entries()

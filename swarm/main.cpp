@@ -138,7 +138,7 @@ get_state_file_size(const bzn::options& options)
 
 
 void
-print_banner(const bzn::options& options, double eth_balance)
+print_banner(const bzn::options& options, double eth_balance, std::shared_ptr<bzn::storage> storage)
 {
     std::stringstream ss;
 
@@ -266,7 +266,7 @@ main(int argc, const char* argv[])
         http_server->start();
         audit->start();
 
-        print_banner(options, eth_balance);
+        print_banner(options, eth_balance, storage);
 
         start_worker_threads_and_wait(io_context);
     }
