@@ -548,7 +548,7 @@ header {
 
 ------------------------------------------------------------
 ```
-### Subscribe
+#### Subscribe
 ```text
 $ ./crud -n localhost:50000 subscribe -u myuuid -k mykey
 Sending: 

@@ -24,12 +24,12 @@ class audit_test : public Test
 {
 public:
     std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<bzn::Mocknode_base>();
+    std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
 
     std::unique_ptr<bzn::asio::Mocksteady_timer_base> leader_alive_timer =
-            std::make_unique<bzn::asio::Mocksteady_timer_base>();
+            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
     std::unique_ptr<bzn::asio::Mocksteady_timer_base> leader_progress_timer =
-            std::make_unique<bzn::asio::Mocksteady_timer_base>();
+            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
     bzn::asio::wait_handler leader_alive_timer_callback;
     bzn::asio::wait_handler leader_progress_timer_callback;
