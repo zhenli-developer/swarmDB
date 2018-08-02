@@ -20,18 +20,18 @@
 
 namespace bzn
 {
-    class whitelist : whitelist_base {
+    class whitelist : public whitelist_base
+    {
     public:
         whitelist();
-        virtual ~whitelist();
+        ~whitelist();
 
         bool is_member(const std::string& uuid) override;
 
     private:
-        static size_t writefunction(void* ptr, size_t size, size_t nmemb, void* stream);
+        static size_t write_function(void *ptr, size_t size, size_t nmemb, void *stream);
         char* build_post_fields(const std::string& uuid);
 
         CURL* curl;
-        static std::string response;
     };
 }

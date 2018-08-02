@@ -43,7 +43,7 @@ namespace bzn
         }
 
         curl_easy_setopt(this->curl, CURLOPT_URL, ROPSTEN_URL);
-        curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, reinterpret_cast<void*>(whitelist::writefunction));
+        curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, reinterpret_cast<void*>(whitelist::write_function));
     }
 
 
@@ -54,7 +54,7 @@ namespace bzn
 
 
     size_t
-    whitelist::writefunction(void* contents, size_t size, size_t nmemb, void* userp)
+    whitelist::write_function(void *contents, size_t size, size_t nmemb, void *userp)
     {
         ((std::string*)userp)->append((char*)contents, size * nmemb);
         return size * nmemb;

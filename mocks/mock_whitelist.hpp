@@ -20,7 +20,8 @@
 namespace bzn {
     class Mockwhitelist_base : public whitelist_base
     {
+        public:
         MOCK_METHOD1(is_member,
-                bool(const bzn::uuid_t& uuid))
+                bool(const bzn::uuid_t& uuid));
     };
 }
