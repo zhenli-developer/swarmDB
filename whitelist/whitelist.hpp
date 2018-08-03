@@ -14,24 +14,19 @@
 
 #pragma once
 
-#include "whitelist_base.hpp"
+#include <whitelist/whitelist_base.hpp>
 #include <curl/curl.h>
-#include <string>
+
 
 namespace bzn
 {
     class whitelist : public whitelist_base
     {
     public:
-        whitelist();
-        ~whitelist();
-
         bool is_member(const std::string& uuid) override;
 
     private:
         static size_t write_function(void *ptr, size_t size, size_t nmemb, void *stream);
-        char* build_post_fields(const std::string& uuid);
-
-        CURL* curl;
     };
-}
+
+} // namespace bzn

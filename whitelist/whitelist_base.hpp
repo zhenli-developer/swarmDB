@@ -16,11 +16,15 @@
 
 #include <include/bluzelle.hpp>
 
+
 namespace bzn
 {
-    class whitelist_base {
+    class whitelist_base
+    {
     public:
         virtual ~whitelist_base() = default;
+
         virtual bool is_member(const bzn::uuid_t& uuid) = 0;
     };
-}
+
+} // namespace bzn
