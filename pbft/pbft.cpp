@@ -28,10 +28,12 @@ pbft::pbft(
         , const bzn::peers_list_t& peers
         , bzn::uuid_t uuid
         , std::shared_ptr<pbft_service_base> service
+        , std::shared_ptr<pbft_failure_detector> failure_detector
 )
         : node(std::move(node))
         , uuid(std::move(uuid))
-        , service(service)
+        , service(std::move(service))
+        , failure_detector(std::move(failure_detector))
 {
     if (peers.empty())
     {

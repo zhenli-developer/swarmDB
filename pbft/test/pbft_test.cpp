@@ -17,6 +17,7 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft.hpp>
 #include <pbft/pbft_service.hpp>
+#include <pbft/pbft_failure_detector.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <proto/bluzelle.pb.h>
@@ -24,6 +25,7 @@
 #include <set>
 #include <google/protobuf/text_format.h>
 #include <boost/beast/core/detail/base64.hpp>
+#include <mocks/mock_boost_asio_beast.hpp>
 
 using namespace ::testing;
 
@@ -52,7 +54,8 @@ namespace
         pbft_test()
                 : mock_node(std::make_shared<NiceMock<bzn::Mocknode_base>>())
                 , service(std::make_shared<NiceMock<bzn::pbft_service>>())
-                , pbft(mock_node, TEST_PEER_LIST, TEST_NODE_UUID, this->service)
+                , pbft(mock_node, TEST_PEER_LIST, TEST_NODE_UUID, this->service,
+                        std::make_shared<bzn::pbft_failure_detector>(std::make_shared<bzn::asio::Mockio_context_base>()))
         {
             request_msg.mutable_request()->set_operation("do some stuff");
             request_msg.mutable_request()->set_client("bob");
@@ -107,7 +110,8 @@ namespace
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(0));
 
-        bzn::pbft pbft2(this->mock_node, TEST_PEER_LIST, SECOND_NODE_UUID, this->service);
+        bzn::pbft pbft2(this->mock_node, TEST_PEER_LIST, SECOND_NODE_UUID, this->service
+                        , std::make_shared<bzn::pbft_failure_detector>(std::make_shared<bzn::asio::Mockio_context_base>()));
 
         EXPECT_TRUE(this->pbft.is_primary());
         EXPECT_FALSE(pbft2.is_primary());

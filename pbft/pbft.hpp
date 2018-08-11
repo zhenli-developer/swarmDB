@@ -18,6 +18,7 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <mutex>
+#include <pbft/pbft_failure_detector.hpp>
 
 namespace bzn
 {
@@ -30,6 +31,7 @@ namespace bzn
                 , const bzn::peers_list_t& peers
                 , bzn::uuid_t uuid
                 , std::shared_ptr<pbft_service_base> service
+                , std::shared_ptr<pbft_failure_detector> failure_detector
         );
 
         void start() override;
@@ -50,7 +52,7 @@ namespace bzn
         pbft_operation& find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         pbft_operation& find_operation(const pbft_msg& msg);
 
-        bzn::request_hash_t request_hash(const pbft_request& req);
+        bzn::hash_t request_hash(const pbft_request& req);
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -83,6 +85,8 @@ namespace bzn
 
         const bzn::uuid_t uuid;
         std::shared_ptr<pbft_service_base> service;
+
+        std::shared_ptr<pbft_failure_detector> failure_detector;
 
         std::mutex pbft_lock;
 

@@ -23,9 +23,9 @@
 namespace bzn
 {
 
-    using request_hash_t = std::string;
+    using hash_t = std::string;
     // View, sequence
-    using operation_key_t = std::tuple<uint64_t, uint64_t, request_hash_t>;
+    using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
 
     // View, sequence
     using log_key_t = std::tuple<uint64_t, uint64_t>;
@@ -42,7 +42,7 @@ namespace bzn
 
         pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
-        static request_hash_t request_hash(const pbft_request& req);
+        static hash_t request_hash(const pbft_request& req);
 
         operation_key_t get_operation_key();
         pbft_operation_state get_state();
