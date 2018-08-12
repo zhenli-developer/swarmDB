@@ -26,14 +26,14 @@ namespace bzn
     class pbft_service : public pbft_service_base
     {
     public:
-        void commit_request(uint64_t sequence, const pbft_request& request) override;
+        void commit_operation(std::shared_ptr<pbft_operation> operation) override;
 
         const pbft_request& get_last_request();
         uint64_t applied_requests_count();
 
     private:
         uint64_t next_request_sequence = 1;
-        std::map<uint64_t, pbft_request> waiting_requests;
+        std::map<uint64_t, std::shared_ptr<pbft_operation>> waiting_requests;
         pbft_request remembered_request;
 
     };

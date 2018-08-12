@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <include/bluzelle.hpp>
 #include <proto/bluzelle.pb.h>
+#include <pbft/pbft_operation.hpp>
 
 namespace bzn
 {
@@ -25,7 +26,7 @@ namespace bzn
     {
     public:
 
-        virtual void commit_request(uint64_t sequence, const pbft_request& request) = 0;
+        virtual void commit_operation(std::shared_ptr<pbft_operation> operation) = 0;
 
         virtual ~pbft_service_base() = default;
 

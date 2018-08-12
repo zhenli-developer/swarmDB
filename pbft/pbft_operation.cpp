@@ -114,3 +114,15 @@ pbft_operation::request_hash(const pbft_request& req)
     // TODO: Actually hash the request; KEP-466
     return req.ShortDebugString();
 }
+
+void
+pbft_operation::record_executed()
+{
+    this->executed = true;
+}
+
+bool
+pbft_operation::is_executed()
+{
+    return this->executed;
+}

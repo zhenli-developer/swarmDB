@@ -296,7 +296,7 @@ pbft::do_committed(std::shared_ptr<pbft_operation> op)
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
-    this->service->commit_request(op->sequence, op->request);
+    this->service->commit_operation(std::move(op));
 }
 
 size_t
