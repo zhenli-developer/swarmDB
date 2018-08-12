@@ -162,9 +162,9 @@ pbft::handle_request(const pbft_msg& msg)
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    pbft_operation& op = this->find_operation(this->view, request_seq, msg.request());
+    std::shared_ptr<pbft_operation> op = this->find_operation(this->view, request_seq, msg.request());
 
-    this->do_preprepare(op);
+    this->do_preprepare(std::move(op));
 }
 
 void
@@ -185,11 +185,11 @@ pbft::handle_preprepare(const pbft_msg& msg)
     }
     else
     {
-        pbft_operation& op = this->find_operation(msg);
-        op.record_preprepare();
+        std::shared_ptr<pbft_operation> op = this->find_operation(msg);
+        op->record_preprepare();
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
-        accepted_preprepares[log_key] = op.get_operation_key();
+        accepted_preprepares[log_key] = op->get_operation_key();
 
         this->do_preprepared(op);
         this->maybe_advance_operation_state(op);
@@ -201,10 +201,10 @@ pbft::handle_prepare(const pbft_msg& msg)
 {
 
     // Prepare messages are never rejected, assuming the sanity checks passed
-    pbft_operation& op = this->find_operation(msg);
+    std::shared_ptr<pbft_operation> op = this->find_operation(msg);
 
-    op.record_prepare(msg);
-    this->maybe_advance_operation_state(op);
+    op->record_prepare(msg);
+    this->maybe_advance_operation_state(std::move(op));
 }
 
 void
@@ -212,10 +212,10 @@ pbft::handle_commit(const pbft_msg& msg)
 {
 
     // Commit messages are never rejected, assuming  the sanity checks passed
-    pbft_operation& op = this->find_operation(msg);
+    std::shared_ptr<pbft_operation> op = this->find_operation(msg);
 
-    op.record_commit(msg);
-    this->maybe_advance_operation_state(op);
+    op->record_commit(msg);
+    this->maybe_advance_operation_state(std::move(op));
 }
 
 void
@@ -230,26 +230,26 @@ pbft::broadcast(const pbft_msg& msg)
 }
 
 void
-pbft::maybe_advance_operation_state(pbft_operation& op)
+pbft::maybe_advance_operation_state(std::shared_ptr<pbft_operation> op)
 {
-    if (op.get_state() == pbft_operation_state::prepare && op.is_prepared())
+    if (op->get_state() == pbft_operation_state::prepare && op->is_prepared())
     {
         this->do_prepared(op);
     }
 
-    if (op.get_state() == pbft_operation_state::commit && op.is_committed())
+    if (op->get_state() == pbft_operation_state::commit && op->is_committed())
     {
         this->do_committed(op);
     }
 }
 
 pbft_msg
-pbft::common_message_setup(const pbft_operation& op, pbft_msg_type type)
+pbft::common_message_setup(const std::shared_ptr<pbft_operation> op, pbft_msg_type type)
 {
     pbft_msg msg;
-    msg.set_view(op.view);
-    msg.set_sequence(op.sequence);
-    msg.set_allocated_request(new pbft_request(op.request));
+    msg.set_view(op->view);
+    msg.set_sequence(op->sequence);
+    msg.set_allocated_request(new pbft_request(op->request));
     msg.set_type(type);
 
 
@@ -260,9 +260,9 @@ pbft::common_message_setup(const pbft_operation& op, pbft_msg_type type)
 }
 
 void
-pbft::do_preprepare(pbft_operation& op)
+pbft::do_preprepare(std::shared_ptr<pbft_operation> op)
 {
-    LOG(debug) << "Doing preprepare for operation " << op.debug_string();
+    LOG(debug) << "Doing preprepare for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
 
@@ -270,9 +270,9 @@ pbft::do_preprepare(pbft_operation& op)
 }
 
 void
-pbft::do_preprepared(pbft_operation& op)
+pbft::do_preprepared(std::shared_ptr<pbft_operation> op)
 {
-    LOG(debug) << "Entering prepare phase for operation " << op.debug_string();
+    LOG(debug) << "Entering prepare phase for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
@@ -280,10 +280,10 @@ pbft::do_preprepared(pbft_operation& op)
 }
 
 void
-pbft::do_prepared(pbft_operation& op)
+pbft::do_prepared(std::shared_ptr<pbft_operation> op)
 {
-    LOG(debug) << "Entering commit phase for operation " << op.debug_string();
-    op.begin_commit_phase();
+    LOG(debug) << "Entering commit phase for operation " << op->debug_string();
+    op->begin_commit_phase();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
@@ -291,12 +291,12 @@ pbft::do_prepared(pbft_operation& op)
 }
 
 void
-pbft::do_committed(pbft_operation& op)
+pbft::do_committed(std::shared_ptr<pbft_operation> op)
 {
-    LOG(debug) << "Operation " << op.debug_string() << " is committed-local";
-    op.end_commit_phase();
+    LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
+    op->end_commit_phase();
 
-    this->service->commit_request(op.sequence, op.request);
+    this->service->commit_request(op->sequence, op->request);
 }
 
 size_t
@@ -318,13 +318,13 @@ pbft::get_primary() const
 }
 
 // Find this node's record of an operation (creating a new record for it if this is the first time we've heard of it)
-pbft_operation&
+std::shared_ptr<pbft_operation>
 pbft::find_operation(const pbft_msg& msg)
 {
     return this->find_operation(msg.view(), msg.sequence(), msg.request());
 }
 
-pbft_operation&
+std::shared_ptr<pbft_operation>
 pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& request)
 {
     auto key = bzn::operation_key_t(view, sequence, pbft_operation::request_hash(request));
@@ -334,13 +334,11 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
     {
         LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req "
                    << request.ShortDebugString();
-        auto result = operations.emplace(
-                std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(
-                        view
-                        , sequence
-                        , request
-                        , std::make_shared<std::vector<peer_address_t>>(this->peer_index)
-                ));
+
+        std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, request,
+                std::make_shared<std::vector<peer_address_t>>(this->peer_index));
+        auto result = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
+
         assert(result.second);
         return result.first->second;
     }

@@ -49,8 +49,8 @@ namespace bzn
         using request_hash_t = std::string;
 
     private:
-        pbft_operation& find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
-        pbft_operation& find_operation(const pbft_msg& msg);
+        std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
+        std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
 
         bzn::hash_t request_hash(const pbft_request& req);
 
@@ -61,15 +61,15 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg);
         void handle_commit(const pbft_msg& msg);
 
-        void maybe_advance_operation_state(pbft_operation& op);
-        void do_preprepare(pbft_operation& op);
-        void do_preprepared(pbft_operation& op);
-        void do_prepared(pbft_operation& op);
-        void do_committed(pbft_operation& op);
+        void maybe_advance_operation_state(std::shared_ptr<pbft_operation> op);
+        void do_preprepare(std::shared_ptr<pbft_operation> op);
+        void do_preprepared(std::shared_ptr<pbft_operation> op);
+        void do_prepared(std::shared_ptr<pbft_operation> op);
+        void do_committed(std::shared_ptr<pbft_operation> op);
 
         void unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
         bzn::message wrap_message(const pbft_msg& message);
-        pbft_msg common_message_setup(const pbft_operation& op, pbft_msg_type type);
+        pbft_msg common_message_setup(const std::shared_ptr<pbft_operation> op, pbft_msg_type type);
         void broadcast(const pbft_msg& message);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
@@ -90,7 +90,7 @@ namespace bzn
 
         std::mutex pbft_lock;
 
-        std::map<bzn::operation_key_t, bzn::pbft_operation> operations;
+        std::map<bzn::operation_key_t, std::shared_ptr<bzn::pbft_operation>> operations;
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
 
         std::once_flag start_once;

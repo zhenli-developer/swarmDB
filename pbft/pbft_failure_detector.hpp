@@ -28,6 +28,8 @@ namespace bzn
 
         void see_request(pbft_request& req);
 
+        void execute_request(pbft_request& req);
+
         void register_failure_handler(std::function<void()> handler);
 
     private:
@@ -35,7 +37,7 @@ namespace bzn
         std::shared_ptr<bzn::asio::io_context_base> io_context;
 
         std::list<bzn::hash_t> ordered_requests;
-        std::unordered_set<bzn::hash_t> requests_set;
+        std::unordered_set<bzn::hash_t> outstanding_requests;
     };
 
 }
